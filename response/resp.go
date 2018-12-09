@@ -9,12 +9,12 @@ import (
 	"sync"
 )
 
-type respError struct {
+type ErrorResponse struct {
 	Error string `json:"Error"`
 }
 
 var respErrorPool = sync.Pool{New: func() interface{} {
-	return new(respError)
+	return new(ErrorResponse)
 }}
 
 func ErrorInternalServer(err string, rw web.ResponseWriter) {
@@ -47,7 +47,7 @@ func Error(err string, rw web.ResponseWriter) {
 }
 
 func WriteError(err string, rw web.ResponseWriter) {
-	data := respErrorPool.Get().(*respError)
+	data := respErrorPool.Get().(*ErrorResponse)
 	data.Error = err
 	jsn, _ := ffjson.Marshal(data)
 	respErrorPool.Put(data)
