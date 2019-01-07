@@ -1,10 +1,13 @@
 package database
 
 import (
+	"errors"
+	"sync"
+	"time"
+
 	"github.com/finalist736/gokit/logger"
 	"github.com/gocraft/dbr"
 	"github.com/gocraft/health"
-	"time"
 )
 
 type DBConfig struct {
@@ -18,6 +21,7 @@ type DBConfig struct {
 	Stream         *health.Stream
 }
 
+var mux sync.RWMutex
 var connections map[string]*dbr.Connection
 
 func init() {
@@ -42,16 +46,50 @@ func Add(cfg *DBConfig) error {
 	if cfg.ConnectionName == "" {
 		cfg.ConnectionName = "default"
 	}
+	mux.Lock()
 	connections[cfg.ConnectionName] = conn
+	mux.Unlock()
 	return nil
 }
 
+func Remove(name string) error {
+	conn := GetConnection(name)
+	if conn == nil {
+		return errors.New("no such connection")
+	}
+	err := conn.Close()
+	if err != nil {
+		return nil
+	}
+	mux.Lock()
+	delete(connections, name)
+	mux.Unlock()
+	return nil
+}
+
+func Close() {
+	mux.Lock()
+	var err error
+	for _, iterator := range connections {
+		err = iterator.Close()
+		if err != nil {
+			logger.StdErr().Warnf("Close connection error: %s", err)
+		}
+	}
+	connections = make(map[string]*dbr.Connection, 0)
+	mux.Unlock()
+}
+
 func GetConnection(name string) *dbr.Connection {
+	mux.RLock()
+	defer mux.RUnlock()
 	return connections[name]
 }
 
 func GetSession(name string) *dbr.Session {
+	mux.RLock()
 	c, ok := connections[name]
+	mux.RUnlock()
 	if !ok {
 		return nil
 	}
