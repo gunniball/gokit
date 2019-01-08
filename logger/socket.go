@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"net"
-	"logger_test/core/config"
+	"github.com/finalist736/gokit/config"
 )
 
 
