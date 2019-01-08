@@ -8,6 +8,11 @@ import (
 var databaseHealthStream *health.Stream
 var jobsHealthStream *health.Stream
 
+//func init () {
+//	jobsHealthStream = JobsStream()
+//	databaseHealthStream = DatabaseStream()
+//}
+
 func DatabaseStream() *health.Stream {
 	if databaseHealthStream == nil {
 		databaseHealthStream = health.NewStream()

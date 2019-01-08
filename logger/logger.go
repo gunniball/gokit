@@ -2,36 +2,41 @@ package logger
 
 import (
 	"encoding/json"
-	"github.com/finalist736/gokit/config"
-	"github.com/sirupsen/logrus"
-	"io"
+	"logger_test/core/config"
 	"os"
+	"io"
+	"github.com/sirupsen/logrus"
 	"syscall"
-	"time"
 )
 
-var stdout, stderr *logrus.Logger
+var stdout, stderr logrus.FieldLogger
+var socketLogger *SocketLogger
 
 func JsonStdOut(name string, jsn interface{}) {
 	ba, _ := json.MarshalIndent(jsn, "", " ")
-	StdOut().Printf(name+" %v", ba)
+	StdOut().Debug(name+" %v", ba)
 }
 
-func StdOut() *logrus.Logger {
+func StdOut() logrus.FieldLogger {
 	return stdout
 }
 
-func StdErr() *logrus.Logger {
+func StdErr() logrus.FieldLogger {
 	return stderr
 }
 
-func ReloadLogs(c *config.Config) {
-	logType := c.MustString("logtype")
+func ReloadLogs() {
+	logLevel := config.MustString("loglevel")
+	logType := config.MustString("logtype")
 	switch logType {
 	case "std":
+		stdout = NewLogger("out", logType, logLevel)
+		stderr = NewLogger("err", logType, logLevel)
 		// selected std outs
 	case "file":
-		logPath := c.MustString("logpath")
+		stdout = NewLogger("out", logType, logLevel)
+		stderr = NewLogger("err", logType, logLevel)
+		logPath := config.MustString("logpath")
 		if logPath == "" {
 			panic("logger: no log path specified")
 		}
@@ -66,42 +71,14 @@ func ReloadLogs(c *config.Config) {
 			panic(err)
 		}
 	case "socket":
-		logPath := c.MustString("logpath")
-
+		logPath := config.MustString("logpath")
 		if logPath == "" {
 			panic("logger: no log socket specified")
 		}
-
-		// open socket, and send all logs there!
+		stdout = NewLogger("out", logType, logLevel)
+		stderr = NewLogger("err", logType, logLevel)
+		socketLogger = NewSocketLogger()
 	default:
 		panic("logger: incorrect logging type")
 	}
-	logLevel := c.MustString("loglevel")
-
-	var err error
-	stdout = logrus.New()
-	stdout.Formatter = &logrus.TextFormatter{
-		ForceColors:      false,
-		TimestampFormat:  time.RFC3339Nano,
-		DisableTimestamp: false,
-		FullTimestamp:    true,
-	}
-	stdout.Level, err = logrus.ParseLevel(logLevel)
-	if err != nil {
-		stdout.Level = logrus.InfoLevel
-	}
-	stdout.Out = os.Stdout
-
-	stderr = logrus.New()
-	stderr.Formatter = &logrus.TextFormatter{
-		ForceColors:      false,
-		TimestampFormat:  time.RFC3339Nano,
-		DisableTimestamp: false,
-		FullTimestamp:    true,
-	}
-	stderr.Level, err = logrus.ParseLevel(logLevel)
-	if err != nil {
-		stderr.Level = logrus.InfoLevel
-	}
-	stderr.Out = os.Stderr
 }
