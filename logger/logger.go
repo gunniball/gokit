@@ -2,7 +2,7 @@ package logger
 
 import (
 	"encoding/json"
-	"logger_test/core/config"
+	"github.com/finalist736/gokit/config"
 	"os"
 	"io"
 	"github.com/sirupsen/logrus"
